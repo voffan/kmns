@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Добавить таблицу{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <>
+{% endblock %}
+
+{% block scripts %}
+var data = [
+{% for table in tables %}
+{% endfor %}
+{"id":1, "name":"table 1", "parent":null, "url": "/users/login"},
+{"id":2, "name":"table 2", "parent":null, "url": "/users/login"},
+];
+
+var tables = {
+"1":2,
+"3":4,
+"5":6,
+};
+
+var editIcon = function(cell, formatterParams){
+    return '<i class="fa fa-edit"></i>';
+}
+var deleteIcon = function(cell, formatterParams){
+    return '<i class="fa fa-trash"></i>';
+}
+var columns = [
+    { title: "ID", field: "id", sorter: 'number', visible:false },
+    { title: "Название", field: "name", sorter: 'string', formatter:'link', formatterParams:{ labelField: "name", urlField: "url"} },
+    { title: "Дочерняя таблица", field: "parent", editor:"select", editorParams:{values:tables}, formatter:"lookup", formatterParams: tables, sorter: 'string' },
+    { width: "3%", align:"center", hozAlign:"center", formatter:editIcon, cellClick:function(e, cell){console.log('Clicked');} },
+    { width: "3%", align:"center", hozAlign:"center", formatter:deleteIcon, cellClick:function(e, cell){console.log('Clicked delete!');} },
+];
+var tables = new Tabulator('#table_list',{
+    data: data,
+    layout: "fitColumns",
+    columns: columns
+});
+{% endblock %}

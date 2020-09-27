@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="modal" id="AddTableModalForm" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="modal_title">Добавить таблицу</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" role="alert" id="modal_error"></div>
+                    <form action="" method="post" id="add_table">
+                        {% csrf_token %}
+                        <input type="text" name="table_id" id="table_id" value="-1" hidden/>
+                        {{ form.as_p }}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="AddTableButton">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-danger" role="alert" id="error" style="position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container">
+        <h4>СПИСОК ПОКАЗАТЕЛЕЙ</h4>
+        <div id="table_list"></div>
+        <br>
+        <div class="d-flex mb-2">
+            <div class="mr-2">
+            <button class="btn btn-primary" id="ShowModal">Добавить таблицу</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    $('#modal_error').hide();
+    $('#error').hide();
+
+    function GetErrorMessage(errorNo){
+        switch(errorNo){
+            case 404: return "Таблица не найдена!";
+            case 403: return "У вас нет прав на операции с таблицами!";
+            default: return 'Проблемы со связью с сервером!';
+        }
+    }
+
+    function ShowError(error_message, type=2){
+        var error =(type == 1)?$('#error'): $('#modal_error');
+        error.html(error_message);
+        error.show();
+        error.delay(3000).slideUp(500, ()=>{$(this).hide();});
+    }
+
+    function ShowModalForm(table){
+        $('#table_id').prop('value',table['id']);
+        $('#id_name').prop('value',table['name']);
+        $('#modal_title').html((table['id']<0)?'Добавить таблицу':'Редактировать таблицу');
+        if (table['id']<0) $('#id_tag').val('')
+        else $('#id_tag').find('option:contains("' + table['tag'] + '")').prop('selected',true)
+        //
+        $('#AddTableModalForm').modal('show');
+    }
+
+    $('#ShowModal').on('click', function (e){
+        //console.log('show modal clicked!');
+        ShowModalForm({"id":-1, "name":'', "tag": ""});
+    });
+
+    $('#AddTableButton').on('click', function(e){
+        $.ajax({
+            url: "{% url 'tables:api:save' %}",
+            method: "POST",
+            data: $('#add_table').serialize(),
+            dataType: "json"
+        }).done(data=>{
+            if(data['result']){
+                if (data['instance']['tag']==null)data['instance']['tag']='Без группы';
+                if($('#table_id').val()<0){
+                    tables.addRow(data['instance']);
+                }else{
+                    tables.updateData([data['instance']]);
+                }
+                $('#AddTableModalForm').modal('hide');
+            }else{
+                ShowError(data['error_msg']);
+            }
+        }).fail(function(jqXHR, textStatus){
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+        //$('#add_table').submit();
+        //$('#AddTableModalForm').modal('hide');
+    });
+
+    function getCSRF(){
+        return $('input[name=csrfmiddlewaretoken]').val();
+    }
+
+	function csrfSafeMethod(method) {
+		return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+
+	// Для методов DELETE, POST и PUT установим CSRF-токен
+	$.ajaxSetup({
+		beforeSend: function (xhr, settings) {
+			if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader('X-CSRFToken', getCSRF());
+			}
+		}
+	});
+
+var data = [
+{% for table in tables %}
+{"id":{{ table.id }}, "name": "{{ table.name }}", "identifier": {% if table.identifier %}"{{ table.identifier}}"{% else %}null{% endif %}, "tag":"{% if table.tag %}{{ table.tag.value.char200_value }}{% else %}Без группы{% endif %}", "url":"{% url 'tables:table_data' table.id %}" },
+{% endfor %}
+];
+
+var editIcon = function(cell, formatterParams){
+    return '<i class="fa fa-edit"></i>';
+}
+var deleteIcon = function(cell, formatterParams){
+    return '<i class="fa fa-trash"></i>';
+}
+var listFields = function(cell, formatterParams){
+    return '<i class="fa fa-list"></i>';
+}
+
+var deleteTable = (e, cell)=>{
+    if(confirm('Вы уверены, что хотите удалить эту таблицу?')){
+        var row = cell.getRow();
+        $.ajax({
+            url: "{% url 'tables:api:deletetable' 12345 %}".replace("12345", row.getData()['id']),
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                row.delete();
+            }else{
+                console.log('error showed');
+                ShowError(data['error_msg'],1);
+            }
+        }).fail(function(jqXHR, textStatus){
+            console.log('error showed');
+            ShowError(GetErrorMessage(jqXHR.status),1);
+        });
+    }
+}
+
+var editTable = (e, cell)=>{
+    var row = cell.getRow();
+    $.ajax({
+        url: "{% url 'tables:api:gettable' 12345 %}".replace("12345", row.getData()['id']),
+        method: "GET",
+    }).done(data=>{
+        if(data['result']){
+            //tables.addRow(data['instance']);
+            ShowModalForm(data['instance']);
+        }else{
+            ShowError(data['error_msg']);
+        }
+    }).fail(function(jqXHR, textStatus){
+        ShowError(GetErrorMessage(jqXHR.status));
+    });
+}
+
+var tableFields = (e, cell)=>{
+    var row = cell.getRow();
+    location.href = "{% url 'tables:table_fields' 12345 %}".replace('12345',row.getData()['id']);
+}
+
+var columns = [
+    { title: "ID", field: "id", sorter: 'number', visible:false },
+    { title: "Название таблицы", field: "name", sorter: 'string', formatter:'link', formatterParams:{ labelField: "name", urlField: "url"} },
+    { title: "Группа", field:"tag", visible:false },
+    { width: "3%", hozAlign:"center", formatter:editIcon, cellClick:editTable, tooltip:"Редактировать таблицу" },
+    { width: "3%", hozAlign:"center", formatter:listFields, cellClick:tableFields, tooltip:"Поля таблицы" },
+    { width: "3%", hozAlign:"center", formatter:deleteIcon, cellClick:deleteTable, tooltip:"Удалить таблицу" },
+];
+var tables = new Tabulator('#table_list',{
+    groupBy:"tag",
+    data: data,
+    layout: "fitColumns",
+    columns: columns
+});
+{% endblock %}

@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load main_extra_tags %}
+{% block title %}Данные показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/sheetjs/xlsx.full.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    {% csrf_token %}
+    <div class="alert alert-danger" role="alert" id="error" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="alert alert-success" role="alert" id="success" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container-fluid h-100">
+        <div class="row">
+            <div class="col">
+                <h4>Таблица "{{table.name}}"</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div id="table_data"></div>
+            </div>
+        </div>
+        <div class="row justify-content-between">
+            <div class="col-auto mr-auto">
+                <div class="d-flex mb-2">
+                    <div class="mr-1">
+                    <button class="btn btn-primary" id="Save">Сохранить</button>
+                    </div>
+                    <div class="mr-1">
+                    <button class="btn btn-primary" id="AddRow">Новая строка</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" id="download-table">Скачать</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    var edited = [];
+
+    function GetErrorMessage(errorNo){
+        switch(errorNo){
+            case 404: { console.log('Cleared');edited = []; return "Таблица не найдена!"; }
+            case 403: { console.log('Cleared');edited = []; return "У вас нет прав на операции с таблицами!"; }
+            default: return 'Проблемы со связью с сервером!';
+        }
+    }
+
+    function ShowError(error_message){
+        var error =$('#error');
+        error.html(error_message);
+        error.css('visibility', 'visible');
+        error.show();
+        error.delay(3000).slideUp(500, ()=>{$(this).hide();});
+    }
+    $('#download-table').on('click', e=>{
+        table_data.download("xlsx", "{{table.name}}".substring(0,30)+".xlsx", {sheetName:"{{table.name}}".substring(0,30)});
+    });
+
+    $('#Save').on('click', e=>{
+        $.ajax({
+            url: "{% url 'tables:api:saverow' %}",
+            data: {'data': JSON.stringify(edited)},
+            dataType: "json",
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                //fields.updateData(data['data']);
+                $('#success').html('Данные успешно сохранены!');
+                $('#success').css('visibility', 'visible');
+                $('#success').show();
+                $('#success').delay(3000).slideUp(500, ()=>{$(this).hide();});
+                edited = [];
+            }else{
+                ShowError(data['error_msg']);
+                if(data['clear']){
+                    edited = [];
+                }
+            }
+        }).fail(function(jqXHR, textStatus){
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+    });
+
+    $('#AddRow').on('click', e=>{
+        $.ajax({
+            url: "{% url 'tables:api:addrow' table.id %}",
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                table_data.addRow(data['row']);
+            }else{
+                ShowError(data['error_msg']);
+            }
+        }).fail(function(jqXHR, textStatus){
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+    });
+
+    function getCSRF(){
+        return $('input[name=csrfmiddlewaretoken]').val();
+    }
+
+	function csrfSafeMethod(method) {
+		return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+
+	// Для методов DELETE, POST и PUT установим CSRF-токен
+	$.ajaxSetup({
+		beforeSend: function (xhr, settings) {
+			if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader('X-CSRFToken', getCSRF());
+			}
+		}
+	});
+
+    var inRange = function(cell, value, parameters){
+        {% if field_id %}
+        var row_id = cell.getRow().getData()[{{field_id}}];
+        if (typeof row_id === 'string') row_id = parseInt(row_id);
+        if((!row_id)){
+            ShowError('Выберите показатель!!');
+            cell.cancelEdit();
+            return false;
+        }
+        if((!limits[row_id]['min'])||(!limits[row_id]['max'])){
+            return true;
+        }
+        else if ((limits[row_id]['min'] <= value) && ( value <= limits[row_id]['max'])){
+            return true;
+        }
+        ShowError('Значение должно быть между ' + limits[row_id]['min'].toString() + ' и ' + limits[row_id]['max'].toString())
+        return false;
+        {% else %}
+        return true;
+        {% endif %}
+    }
+
+    var clicked = function(e, cell){
+        /*var row_id = cell.getRow().getData()[{{field_id}}];
+        if(!row_id){
+            cell.cancelEdit();
+            ShowError('Выберите показатель!!');
+        }*/
+    }
+
+    var limits = {
+    {% for cell_id, limit in limits.items %}
+    {{cell_id}}:{ 'max': {% if limit|get_field_data:'max' %}{{limit|get_field_data:'max'}}{%else%}null{%endif%},
+                  'min': {% if limit|get_field_data:'min' %}{{limit|get_field_data:'min'}}{%else%}null{%endif%} },
+    {% endfor %}
+    }
+    var data = [
+    {% for row in data %}
+    {
+     "id":{{ row.id }},
+     "number": {{ row.number }},
+     "date": {%if row.date %} {{ row.date }} {% else %} null {% endif %},
+     {% for field in table.all_fields %}
+     "{{field.id}}":{% if field.column_type == 6 or field.column_type == 7 or field.column_type == 8 %}"{%endif%}{% if row|get_field_data:field.id %}{{ row|get_field_data:field.id }}{% else %}null{% endif %}{% if field.column_type == 6 or field.column_type == 7 or field.column_type == 8 %}"{%endif%},
+     {% endfor %}
+    },
+    {% endfor %}
+    ];
+
+    var deleteIcon = function(cell, formatterParams){
+        return '<i class="fa fa-trash"></i>';
+    }
+
+    var deleteField = (e, cell)=>{
+        if(confirm('Вы уверены, что хотите удалить эту строку?')){
+            var row = cell.getRow();
+            $.ajax({
+                url: "{% url 'tables:api:deleterow' 12345 %}".replace("12345", row.getData()['id']),
+                method: "POST",
+            }).done(data=>{
+                if(data['result']){
+                    var ind_del = edited.findIndex((element, index, array)=>{return element['id'] === row.id});
+                    if(ind_del >= 0){
+                        delete edited[ind_del];
+                    }
+                    row.delete();
+                }else{
+                    ShowError(data['error_msg'],1);
+                }
+            }).fail(function(jqXHR, textStatus){
+                ShowError(GetErrorMessage(jqXHR.status),1);
+            });
+        }
+    }
+
+    var dateEditor = function(cell, onRendered, success, cancel){
+        //cell - the cell component for the editable cell
+        //onRendered - function to call when the editor has been rendered
+        //success - function to call to pass the successfuly updated value to Tabulator
+        //cancel - function to call to abort the edit and return to a normal cell
+
+        //create and style input
+        var cellValue = moment(cell.getValue(), "DD/MM/YYYY").format("YYYY.MM.DD"),
+        input = document.createElement("input");
+
+        input.setAttribute("type", "date");
+
+        input.style.padding = "4px";
+        input.style.width = "100%";
+        input.style.boxSizing = "border-box";
+
+        input.value = cellValue;
+
+        onRendered(function(){
+            input.focus();
+            input.style.height = "100%";
+        });
+
+        function onChange(){
+            if(input.value != cellValue){
+                success(moment(input.value, "YYYY-MM-DD").format("DD.MM.YYYY"));
+            }else{
+                cancel();
+            }
+        }
+
+        //submit new value on blur or change
+        input.addEventListener("blur", onChange);
+
+        //submit new value on enter
+        input.addEventListener("keydown", function(e){
+            if(e.keyCode == 13){
+                onChange();
+            }
+
+            if(e.keyCode == 27){
+                cancel();
+            }
+        });
+
+        return input;
+    };
+
+    {% for field in refs %}
+    var field{{field.id}}={
+        null: "Выберите",
+        {% for item in field.data %}
+        {{item.id}}:"{{item.value}}",
+        {% endfor %}
+    }
+    {% endfor %}
+
+    var LookupAccessor = function(value, data, type, params, column){
+        switch(column.getField()){
+        {% for field in refs %}
+            case "{{field.id}}": return field{{field.id}}[value];
+        {% endfor %}
+        }
+    }
+
+    var reports={
+    {% for report in reports %}
+    {{report.id}}:"{{report}}",
+    {% endfor %}
+    };
+
+    var columns = [
+        { title: "Номер", field: "number", sorter: 'number', width:"5%", editor:"number" },
+        { title: "Дата", field: "date", sorter: "number", editor:"select", editorParams:{values:reports}, formatter:"lookup", formatterParams:reports, width: "15%", },
+        {% for field in table.all_fields %}
+        {title: "{{ field.brief_name }}", field: "{{field.id}}",
+        {% if field.column_type == 1 %}
+        editor:true, formatter:"tickCross", tooltip: true,
+        {% elif field.column_type == 2 or field.column_type == 3 %}
+        sorter: "number", editor: "number"{% if field.column_type == 3 %}, formatter:"money", formatterParams:{decimal:".", thousand:" ", precision: {{ field.decimal_places }} }{% endif %},
+        validator:[{type:inRange,parameters:{}}], cellClick:clicked, tooltip: true,
+        {% elif field.column_type == 4 or field.column_type == 5 %}
+        sorter: "date", editor: dateEditor, tooltip: true,
+        {% elif field.column_type == 7 or field.column_type == 8 %}
+        sorter: 'string', editor:"input", editorParams:{elementAttributes:{maxlength:{% if field.column_type == 7 %}"50"{% else %}"200"{% endif %} }}, tooltip: true,
+        {% elif field.column_type == 9 %}
+        sorter: "number", editor:"select", editorParams: {values:field{{field.id}}}, formatter:"lookup", formatterParams:field{{field.id}}, accessorDownload:LookupAccessor,
+        tooltip: function(cell){
+            return field{{field.id}}[cell.getData()[{{field.id}}]];
+        },
+        {% endif %}
+        headerTooltip: "{{field.full_name}}"
+        },
+        {% endfor %}
+        { width: "3%", hozAlign:"center", formatter:deleteIcon, cellClick:deleteField, tooltip:"Удалить таблицу" },
+    ];
+
+    //data: data,
+    var table_data = new Tabulator('#table_data',{
+        layout: "fitColumns",
+        columns: columns,
+        tooltipsHeader: true,
+        locale: true,
+        pagination: 'remote',
+        ajaxURL: "{% url 'tables:api:gettabledata' %}",
+        ajaxParams: {'table_id': {{ table.id }}},
+        height: "450px",
+        cellEdited:(cell)=>{
+            var row = cell.getRow().getData();
+            var ind = edited.findIndex((element, index, array)=>{return element['id'] === row.id});
+            if(ind < 0){
+                edited.push(row);
+            }
+        }
+    });
+
+{% endblock %}

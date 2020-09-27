@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    {% csrf_token %}
+    <div class="alert alert-danger" role="alert" id="error" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="alert alert-success" role="alert" id="success" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container">
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    <h4>Столбцы таблицы "{{table.name}}"</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div id="field_list"></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="d-flex mb-2">
+                        <div class="mr-1">
+                        <button class="btn btn-primary" id="Save">Сохранить</button>
+                        </div>
+                        <div class="mr-1">
+                        <button class="btn btn-primary" id="AddField">Добавить столбец</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    //$('#error').hide();
+    //$('#success').hide();
+
+    function GetErrorMessage(errorNo){
+        switch(errorNo){
+            case 404: return "Таблица не найдена!";
+            case 403: return "У вас нет прав на операции с таблицами!";
+            default: return 'Проблемы со связью с сервером!';
+        }
+    }
+
+    function ShowError(error_message){
+        var error =$('#error');
+        error.html(error_message);
+        error.css('visibility', 'visible');
+        error.show();
+        error.delay(3000).slideUp(500, ()=>{$(this).hide();});
+    }
+
+    $('#Save').on('click', e=>{
+        console.log(fields.getData());
+        $.ajax({
+            url: "{% url 'tables:api:savefields' table.id %}",
+            data: {'data': JSON.stringify(fields.getData())},
+            dataType: "json",
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                fields.updateData(data['data']);
+                $('#success').html('Данные успешно сохранены!');
+                $('#success').css('visibility', 'visible');
+                $('#success').show();
+                $('#success').delay(3000).slideUp(500, ()=>{$(this).hide();});
+            }else{
+                ShowError(data['error_msg']);
+            }
+        }).fail(function(jqXHR, textStatus){
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+    });
+
+    $('#AddField').on('click', e=>{
+        $.ajax({
+            url: "{% url 'tables:api:addfield' table.id %}",
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                fields.addRow(data['instance']);
+            }else{
+                ShowError(data['error_msg']);
+            }
+        }).fail(function(jqXHR, textStatus){
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+    });
+
+    function getCSRF(){
+        return $('input[name=csrfmiddlewaretoken]').val();
+    }
+
+	function csrfSafeMethod(method) {
+		return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+
+	// Для методов DELETE, POST и PUT установим CSRF-токен
+	$.ajaxSetup({
+		beforeSend: function (xhr, settings) {
+			if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader('X-CSRFToken', getCSRF());
+			}
+		}
+	});
+
+    var data = [
+    {% for column in columns %}
+    {
+     "id":{{ column.id }},
+     "number": {{ column.number }},
+     "table": {{ column.table.id }},
+     "full_name": "{{ column.full_name }}",
+     "brief_name": "{{ column.brief_name }}",
+     "decimal_places": {{ column.decimal_places }},
+     "column_type": {{ column.column_type }},
+     "use_in_relation": {% if column.use_in_relation %}true{% else %}false{% endif %},
+     "ref": {% if column.parent %}{{ column.parent.id }}{% else %}null{% endif %}
+    },
+    {% endfor %}
+    ];
+
+    var deleteIcon = function(cell, formatterParams){
+        return '<i class="fa fa-trash"></i>';
+    }
+
+    var types = {
+        null: "Выберите тип",
+    {% for type in types %}
+         {{ type.0 }}: "{{ type.1 }}",
+    {% endfor %}
+    };
+
+    var tables = {
+    null: "Выберите таблицу",
+    {% for table in tables %}
+    {{ table.id }}: "{{ table.name }}",
+    {% endfor %}
+    }
+
+    var deleteField = (e, cell)=>{
+        if(confirm('Вы уверены, что хотите удалить этот столбец?')){
+            var row = cell.getRow();
+            $.ajax({
+                url: "{% url 'tables:api:deletefield' 12345 %}".replace("12345", row.getData()['id']),
+                method: "POST",
+            }).done(data=>{
+                if(data['result']){
+                    row.delete();
+                }else{
+                    ShowError(data['error_msg'],1);
+                }
+            }).fail(function(jqXHR, textStatus){
+                ShowError(GetErrorMessage(jqXHR.status),1);
+            });
+        }
+    }
+
+    var columns = [
+        { title: "ID", field: "id", sorter: 'number', visible:false },
+        { title: "Номер", field: "number", sorter: 'number', width:"5%", editor:"number", editorParams:{min:1, max:1000, step:1} },
+        { title: "Полное название", field: "full_name", sorter: 'string', editor:"input", editorParams:{elementAttributes:{maxlength:"200",}} },
+        { title: "Краткое название", field: "brief_name", sorter: 'string', editor:"input", editorParams:{elementAttributes:{maxlength:"50",}} },
+        { title: "Тип данных", field: "column_type", sorter: 'number', editor:"select", editorParams:{values:types}, formatter: "lookup", formatterParams:types, width:"10%" },
+        { title: "Связанная таблица", field: "ref", sorter: 'number', editor:"select", editorParams:{values:tables}, formatter: "lookup", formatterParams:tables },
+        { title: "Использовать в связной таблице", field: "use_in_relation", editor:true, formatter:"tickCross" },
+        { title: "Знаков после запятой", field: "decimal_places", sorter: 'number', editor:"number", editorParams:{min:0, max:5, step:1}, width:"5%" },
+        { width: "3%", hozAlign:"center", formatter:deleteIcon, cellClick:deleteField, tooltip:"Удалить строку" },
+    ];
+
+    var fields = new Tabulator('#field_list',{
+        data: data,
+        layout: "fitColumns",
+        columns: columns,
+        rowUpdated:row=>{
+            console.log('Updated!');
+        },
+    });
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="modal" id="AddReportModalForm" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="modal_title">Добавить Отчет</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger" role="alert" id="modal_error"></div>
+                    <form action="" method="post" id="add_report">
+                        {% csrf_token %}
+                        <input type="text" name="report_id" id="report_id" value="-1" hidden/>
+                        {{ form.as_p }}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="AddReportButton">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-danger" role="alert" id="error" style="position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container">
+        <h4>СПИСОК ОТЧЕТОВ</h4>
+        <div id="reports_list"></div>
+        <br>
+        <div class="d-flex mb-2">
+            <div class="mr-2">
+            <button class="btn btn-primary" id="ShowModal">Добавить отчет</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    $('#modal_error').hide();
+    $('#error').hide();
+
+    function GetErrorMessage(errorNo){
+        switch(errorNo){
+            case 404: return "Отчет не найден!";
+            case 403: return "У вас нет прав на удаление отчетов!";
+            default: return 'Проблемы со связью с сервером!';
+        }
+    }
+
+    function ShowError(error_message, type=2){
+        var error =(type == 1)?$('#error'): $('#modal_error');
+        error.html(error_message);
+        error.show();
+        error.delay(3000).slideUp(500, ()=>{$(this).hide();});
+    }
+
+    function ShowModalForm(report){
+        console.log(report);
+        $('#report_id').prop('value',report['id']);
+        $('#id_user').val(report['user']);
+        $('#id_state').val(report['state']);
+        $('#id_text').val(report['text']);
+        $('#modal_title').html((report['id']<0)?'Добавить отчет':'Редактировать отчет');
+        //
+        $('#AddReportModalForm').modal('show');
+    }
+
+    $('#ShowModal').on('click', function (e){
+        //console.log('show modal clicked!');
+        ShowModalForm({"id":-1, "user":-1, "state": 0, "text": ""});
+    });
+
+    $('#AddReportButton').on('click', function(e){
+        $.ajax({
+            url: "{% url 'reports:api:savereport' %}",
+            method: "POST",
+            data: $('#add_report').serialize(),
+            dataType: "json"
+        }).done(data=>{
+            if(data['result']){
+                if($('#report_id').val()<0){
+                    reports.addRow(data['instance']);
+                }else{
+                    reports.updateData([data['instance']]);
+                }
+                $('#AddReportModalForm').modal('hide');
+            }else{
+                ShowError(data['error_msg']);
+            }
+        }).fail(function(jqXHR, textStatus){
+            console.log(jqXHR.status);
+            ShowError(GetErrorMessage(jqXHR.status));
+        });
+        //$('#add_report').submit();
+        //$('#AddTableModalForm').modal('hide');
+    });
+
+    function getCSRF(){
+        return $('input[name=csrfmiddlewaretoken]').val();
+    }
+
+	function csrfSafeMethod(method) {
+		return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	}
+
+	// Для методов DELETE, POST и PUT установим CSRF-токен
+	$.ajaxSetup({
+		beforeSend: function (xhr, settings) {
+			if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader('X-CSRFToken', getCSRF());
+			}
+		}
+	});
+
+var data = [
+{% for report in reports %}
+{"id":{{ report.id }}, "user": {{ report.user.id }}, "date": "{{ report.report_date|date:"d.m.Y" }}", "state": {{ report.state }}, "text": "{{ report.text }}", "url": "{% url 'reports:report_tables' report.id %}" },
+{% endfor %}
+];
+
+var users = {
+null: "Выберите пользователя",
+{% for user in users %}
+{{ user.0 }}: "{{ user.1 }}",
+{% endfor %}
+}
+
+var states = {
+null: "Выберите состояние",
+{% for state in states %}
+{{ state.0 }}: "{{ state.1 }}",
+{% endfor %}
+}
+
+var editIcon = function(cell, formatterParams){
+    return '<i class="fa fa-edit"></i>';
+}
+var deleteIcon = function(cell, formatterParams){
+    return '<i class="fa fa-trash"></i>';
+}
+
+var deleteTable = (e, cell)=>{
+    if(confirm('Удалить этот отчет?')){
+        var row = cell.getRow();
+        $.ajax({
+            url: "{% url 'reports:api:deletereport' 12345 %}".replace("12345", row.getData()['id']),
+            method: "POST",
+        }).done(data=>{
+            if(data['result']){
+                row.delete();
+            }else{
+                console.log('error showed');
+                ShowError(data['error_msg'],1);
+            }
+        }).fail(function(jqXHR, textStatus){
+            console.log('error showed');
+            ShowError(GetErrorMessage(jqXHR.status),1);
+        });
+    }
+}
+
+var editTable = (e, cell)=>{
+    var row = cell.getRow();
+    $.ajax({
+        url: "{% url 'reports:api:getreport' 12345 %}".replace("12345", row.getData()['id']),
+        method: "GET",
+    }).done(data=>{
+        if(data['result']){
+            //tables.addRow(data['instance']);
+            ShowModalForm(data['instance']);
+        }else{
+            ShowError(data['error_msg']);
+        }
+    }).fail(function(jqXHR, textStatus){
+        ShowError(GetErrorMessage(jqXHR.status));
+    });
+}
+
+var dateEditor = function(cell, onRendered, success, cancel){
+    //cell - the cell component for the editable cell
+    //onRendered - function to call when the editor has been rendered
+    //success - function to call to pass the successfuly updated value to Tabulator
+    //cancel - function to call to abort the edit and return to a normal cell
+
+    //create and style input
+    var cellValue = moment(cell.getValue(), "DD/MM/YYYY").format("YYYY.MM.DD"),
+    input = document.createElement("input");
+
+    input.setAttribute("type", "date");
+
+    input.style.padding = "4px";
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+
+    input.value = cellValue;
+
+    onRendered(function(){
+        input.focus();
+        input.style.height = "100%";
+    });
+
+    function onChange(){
+        if(input.value != cellValue){
+            success(moment(input.value, "YYYY-MM-DD").format("DD.MM.YYYY"));
+        }else{
+            cancel();
+        }
+    }
+
+    //submit new value on blur or change
+    input.addEventListener("blur", onChange);
+
+    //submit new value on enter
+    input.addEventListener("keydown", function(e){
+        if(e.keyCode == 13){
+            onChange();
+        }
+
+        if(e.keyCode == 27){
+            cancel();
+        }
+    });
+
+    return input;
+};
+
+var columns = [
+    { title: "ID", field: "id", sorter: 'number', visible:false},
+    { title: "Пользователь", field:"user", sorter: "number", editor:"select", editorParams:{values:users}, formatter:"lookup", formatterParams:users },
+    { title: "Дата отчета", field: "date", sorter: dateEditor, width: "10%" },// formatter:'link', formatterParams:{ labelField: "date", urlField: "url"} },
+    { title: "Состояние", field:"state", sorter: "number", editor:"select", editorParams:{values:states}, formatter:"lookup", formatterParams:states, width: "15%" },
+    { title: "Комментарии", field: "text", sorter: "string" },
+    { width: "3%", hozAlign:"center", formatter:editIcon, cellClick:editTable, tooltip:"Редактировать" },
+    { width: "3%", hozAlign:"center", formatter:deleteIcon, cellClick:deleteTable, tooltip:"Удалить" },
+];
+var reports = new Tabulator('#reports_list',{
+    groupBy:"user",
+    data: data,
+    layout: "fitColumns",
+    columns: columns
+});
+{% endblock %}

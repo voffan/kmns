@@ -1,0 +1,12 @@
+venv
+.idea
+static
+log/files
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.sqlite3
+*.pyc
+*.log
