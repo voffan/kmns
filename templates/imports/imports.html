@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="alert alert-danger" role="alert" id="error" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="alert alert-success" role="alert" id="success" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h4>Загрузка файлов!</h4>
+            </div>
+        </div>
+    </div>
+    <form method="post" id="mainform">
+        {% csrf_token %}
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    {{ user_form.as_p }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <h4>Выберите файлы</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    {{ file_form.management_form }}
+                    <table class="table table-stripped" id="formfiles">
+                        <thead>
+                        <tr>
+                        {% for field in file_form.0 %}
+                        <th>{{ field.label }}</th>
+                        {% endfor %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for form in file_form %}
+                        <tr>
+                        {% for field in form %}
+                            <td width="60%">{{ field }}</td>
+                        {% endfor %}
+                            <td><button class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="Удалить строку" name="DeleteRow">-</button></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <p align="right">
+                        <button class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="Добавить строку" id="AddRow">+</button>
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="d-flex mb-2">
+                        <div class="mr-1">
+                        <button type="submit" class="btn btn-primary" id="Save">Загрузить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+{% block scripts %}
+$("#id_form-TOTAL_FORMS").val($('#formfiles').find('tbody').find('tr').length);
+
+$(document).on('click', 'button[name="DeleteRow"]', function(e){
+    e.preventDefault();
+    var totalForms = $('#formfiles').find('tbody').find('tr').length;
+    if(totalForms > 1){
+        if (confirm('Вы уверены, что хотите удалить строку?')){
+            let row = $(this).closest('tr');
+            let name = row[0].innerHTML.match(RegExp('form-(\\d){1,2}-','g'))[0]+'DELETE';
+            $('<input type="checkbox" id="id_' + name + '" name="'+ name +'" checked hidden />').appendTo(row);
+            row.hide();
+        }
+    }else{
+        alert('Нельзя удалять последнюю строку!');
+    }
+});
+$('#AddRow').on('click', function(e){
+    e.preventDefault();
+    let totalForms = $('#formfiles').find('tbody').find('tr').length;
+    let newRow = $('#formfiles').find('tbody').find('tr:visible').first().clone();
+    newRow[0].innerHTML = newRow[0].innerHTML.replace(RegExp('form-(\\d){1,2}-','g'), `form-${totalForms}-`)
+    $('#formfiles').find('tbody').append(newRow);
+    $("#id_form-TOTAL_FORMS").val(totalForms + 1);
+});
+{% endblock %}

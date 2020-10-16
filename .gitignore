@@ -2,8 +2,10 @@ venv
 .idea
 static
 log/files
+migrations
 
 __pycache__/
+production.py
 *.py[cod]
 *$py.class
 

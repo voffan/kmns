@@ -23,4 +23,5 @@ urlpatterns = [
     path('users/', include(('users.urls', 'users'), namespace='users')),
     path('tables/', include(('main.urls', 'main'), namespace='tables')),
     path('reports/', include(('reports.urls', 'reports'), namespace='reports')),
+    path('imports/', include(('imports.urls', 'imports'), namespace='imports')),
 ]

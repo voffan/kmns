@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'report_messages',
     'reports',
     'users',
+    'imports',
 ]
 
 MIDDLEWARE = [
