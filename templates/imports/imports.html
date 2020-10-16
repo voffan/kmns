@@ -78,7 +78,7 @@ $("#id_form-TOTAL_FORMS").val($('#formfiles').find('tbody').find('tr').length);
 
 $(document).on('click', 'button[name="DeleteRow"]', function(e){
     e.preventDefault();
-    var totalForms = $('#formfiles').find('tbody').find('tr').length;
+    var totalForms = $('#formfiles').find('tbody').find('tr:visible').length;
     if(totalForms > 1){
         if (confirm('Вы уверены, что хотите удалить строку?')){
             let row = $(this).closest('tr');
