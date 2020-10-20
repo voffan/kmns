@@ -1,7 +1,14 @@
+from collections import defaultdict
+
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import OuterRef, Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import redirect, render, reverse, get_object_or_404
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.styles import Alignment, PatternFill
+from openpyxl import Workbook
+from openpyxl.comments import Comment
+
 from main.forms import AddTableForm
 from main.models import *
 from users.models import Person
@@ -13,7 +20,24 @@ def index(request):
     if not request.user.is_authenticated:
         return HttpResponseRedirect(reverse('users:login'))
     else:
-        return HttpResponseRedirect(reverse('tables:list'))
+        return HttpResponseRedirect(reverse('tables:start'))
+
+
+@login_required(login_url='/users/login/')
+def start(request):
+    return render(request, "main/main.html")
+
+
+@login_required(login_url='/users/login/')
+def indicators(request):
+    tables = Table.objects.all()
+    if request.user.groups.filter(name='Operator').exists():
+        tables = tables.exclude(tag__isnull=True)
+    dict_tables = defaultdict(list)
+    for table in tables:
+        dict_tables[table.tag.get_value() if table.tag is not None else 'Справочник'].append(table)
+    tags = list(Cell.objects.filter(row__table__name__icontains='Группы показателей', col__brief_name__icontains='Название').values_list('value__char200_value', flat=True))
+    return render(request, 'main/tables_list_copy.html', { 'tags': tags, 'dict_tables': dict_tables })
 
 
 @login_required(login_url='/users/login/')
@@ -22,8 +46,7 @@ def tables_list(request):
     tables = Table.objects.all()
     if request.user.groups.filter(name='Operator').exists():
         tables = tables.exclude(tag__isnull=True)
-    tags = Tag.objects.all()
-    return render(request, 'main/tables_list.html', { 'form': add_form, 'tables': tables, 'tags': tags })
+    return render(request, 'main/tables_list.html', { 'form': add_form, 'tables': tables })
 
 
 @login_required(login_url='/users/login/')
@@ -126,3 +149,90 @@ def get_limits(table_id):
             for cell in cells:
                 result[cell[0]] = {'max': cell[1], 'min': cell[2]}
     return result, field_id
+
+
+def export_indicators(request):
+    wb = get_indicators()
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=indicators.xlsx'
+    wb.save(response)
+    return response
+
+
+def get_indicators():
+    wb = Workbook()
+    ws = wb.active
+    indicators = Cell.objects.select_related('row', 'col', 'row__table', 'col__parent').filter(row__table__id=22).order_by('row__id', 'col__number')
+    groups = dict(Cell.objects.filter(row__table__id=20).values_list('id', 'value__char200_value'))
+    group = indicators[0].value.ref_value.id
+    row_id = indicators[0].row.id
+    ws.title = groups[group][:30]
+    row_num = add_headers(ws)
+    first_row = row_num
+    group_field_id = indicators[0].col.id
+    min_val = 0
+    red_fill = PatternFill(start_color='EE1111', end_color='EE1111', fill_type='solid')
+
+    for cell in indicators:
+        if cell is None:
+            continue
+        if cell.col.parent is not None and cell.col.parent.id == 20 and group != cell.value.ref_value.id:
+            ws.cell(row=row_num, column=1, value=(row_num - first_row + 1))
+            group = cell.value.ref_value.id
+            ws = wb.create_sheet(groups[group][:30])
+            row_num = add_headers(ws)
+            row_id = cell.row.id
+            first_row = row_num
+
+        if cell.row.id > row_id:
+            ws.cell(row=row_num, column=1, value=(row_num - first_row + 1))
+            row_id = cell.row.id
+            row_num += 1
+        if cell.col.id == group_field_id:
+            continue
+        elif cell.col.id == 53:
+            min_val = cell.get_value()
+        elif cell.col.id == 54:
+            max_val = cell.get_value()
+            current_cell = ws.cell(row=row_num, column=4)
+            if min_val is not None:
+                ws.conditional_formatting.add(current_cell.coordinate, CellIsRule(operator='lessThan', formula=[min_val], stopIfTrue=True, fill=red_fill))
+            if max_val is not None:
+                ws.conditional_formatting.add(current_cell.coordinate, CellIsRule(operator='greaterThan', formula=[max_val], stopIfTrue=True, fill=red_fill))
+            add_comment(current_cell, min_val, max_val)
+        elif cell.value is not None:
+            if cell.col.column_type == REFERENCE:
+                if cell.value.ref_value is not None:
+                    ws.cell(row=row_num, column=(cell.col.number), value=cell.value.ref_value.get_value())
+            else:
+                c = ws.cell(row=row_num, column=(cell.col.number), value=cell.get_value())
+                c.alignment = Alignment(wrapText=True)
+    return wb
+
+
+def add_headers(worksheet):
+    worksheet.cell(row=1, column=1, value='№')
+    worksheet.cell(row=1, column=2, value='Наименование показателя')
+    worksheet.cell(row=1, column=3, value='Ед. изм.')
+    worksheet.cell(row=1, column=4, value='Значение')
+    worksheet.column_dimensions['B'].width = 80
+    worksheet.column_dimensions['A'].width = 4
+    worksheet.column_dimensions['C'].width = 20
+    worksheet.column_dimensions['D'].width = 20
+    return 2
+
+
+def add_conditional_formatting(worksheet, row, col, max_val, min_val):
+    pass
+
+
+def add_comment(cell, min_val, max_val):
+    comment = ''
+    if max_val is not None and min_val is not None:
+        comment = 'Значение показателя должно быть между ' + str(min_val) + ' и ' + str(max_val)
+    elif max_val is not None and min_val is None:
+        comment = 'Значение показателя не должно превышать ' + str(max_val)
+    elif min_val is not None and max_val is None:
+        comment = 'Значение показателя не должно быть меньше ' + str(min_val)
+    if comment != '':
+        cell.comment = Comment(comment, '')

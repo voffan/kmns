@@ -15,7 +15,10 @@ api = ([
 ], 'api')
 
 urlpatterns = [
+    path('start', views.start, name='start'),
     path('list/', views.tables_list, name='list'),
+    path('indicators/', views.indicators, name='indicators'),
+    path('exportindicators/', views.export_indicators, name='exportindicators'),
     path('<int:table_id>', views.table_data, name='table_data'),
     path('fields/<int:table_id>', views.table_fields, name='table_fields'),
     path('api/', include(api, namespace='api')),

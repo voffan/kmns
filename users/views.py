@@ -12,7 +12,7 @@ from users.forms import EditUserForm, EditPersonForm, CustomPasswordChangeForm
 
 def login(request):
     if request.user.is_authenticated:
-        return HttpResponseRedirect(reverse('tables:list'))
+        return HttpResponseRedirect(reverse('tables:start'))
     if request.method == 'POST':
         args = {}
         username = request.POST.get('username', '')
@@ -20,7 +20,7 @@ def login(request):
         user = auth.authenticate(username=username, password=password)
         if user is not None:
             auth.login(request, user)
-            return HttpResponseRedirect(reverse('tables:list'))
+            return HttpResponseRedirect(reverse('tables:start'))
         else:
             args['login_error'] = "Внимание, вход на сайт не был произведен. " \
                                   "Возможно, вы ввели неверное имя пользователя или пароль."

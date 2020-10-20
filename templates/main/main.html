@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid">
+        <div class="row align-items-center" style="height:500px;">
+            <div class="col">
+                <div class="card text-white bg-info" style="height:200px">
+                    <div class="card-body align-items-center d-flex justify-content-center">
+                        <a href="{% url 'tables:indicators' %}" class="card-link" style="color:white;"><h1>Ввод данных</h1></a>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card text-white bg-info" style="height:200px">
+                    <div class="card-body align-items-center d-flex justify-content-center">
+                        <a href="#" class="card-link" style="color:white;"><h1>Мониторинг</h1></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+{% endblock %}
