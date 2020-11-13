@@ -137,6 +137,8 @@ class Cell(Model):
         return self.row.table.name + ' R' + str(self.row.number) + ':C' + str(self.col.number) + ' ' + str(self.get_value())
 
     def get_value(self):
+        if self.col.column_type == REFERENCE and self.value is None:
+            return None
         if self.value is None:
             return ''
         return self.value.get_value(self.col.column_type)
