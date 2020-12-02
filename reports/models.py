@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 EDITING = 1
 READYTOCHECK = 2
 CHECKING = 3
-EXCEPTED = 4
+ACCEPTED = 4
 REWORK = 5
 NEW = 6
 
@@ -18,7 +18,7 @@ STATES = (
     (EDITING,       'Редактируется'),
     (READYTOCHECK,  'Готов к проверке'),
     (CHECKING,      'Проверяется'),
-    (EXCEPTED,      'Согласовано'),
+    (ACCEPTED, 'Согласовано'),
     (REWORK,        'На доработку'),
 )
 
