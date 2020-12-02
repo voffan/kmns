@@ -29,6 +29,11 @@ def start(request):
 
 
 @login_required(login_url='/users/login/')
+def admins(request):
+    return render(request, "main/admin.html")
+
+
+@login_required(login_url='/users/login/')
 def indicators(request):
     tables = Table.objects.all()
     if request.user.groups.filter(name='Operator').exists():

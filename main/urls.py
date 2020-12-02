@@ -21,5 +21,6 @@ urlpatterns = [
     path('exportindicators/', views.export_indicators, name='exportindicators'),
     path('<int:table_id>', views.table_data, name='table_data'),
     path('fields/<int:table_id>', views.table_fields, name='table_fields'),
+    path('admin', views.admins, name='admin_page'),
     path('api/', include(api, namespace='api')),
 ]
