@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Список показателей{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <H3>Плотность населения в Момском районе</H3>
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <img src="{% static 'img/map.PNG' %}" width="400" height="400">
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+{% endblock %}

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'reports',
     'users',
     'imports',
+    'analytics',
 ]
 
 MIDDLEWARE = [
