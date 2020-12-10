@@ -28,7 +28,6 @@ class ImportTemplateForm(ModelForm):
 
 
 class TemplateIndicatorsForm(ModelForm):
-
     def __init__(self, *args, **kwargs):
         super(TemplateIndicatorsForm, self).__init__(*args, **kwargs)
         if 'initial' in kwargs:

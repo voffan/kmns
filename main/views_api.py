@@ -301,6 +301,7 @@ def save_row(request):
                                     len(row_data[key]) < 1:
                                 row_data[key] = None
                             cell.set_value(row_data[key])
+                            cell.save()
                         '''
                         for key in row_data.keys():
                             if key.isnumeric():

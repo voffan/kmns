@@ -8,5 +8,5 @@ api = ([
 
 urlpatterns = [
     path('api/', include(api, namespace='api')),
-    path('map', views.map, name='map'),
+    path('map', views.index, name='map'),
 ]

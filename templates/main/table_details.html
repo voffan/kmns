@@ -65,6 +65,7 @@
     });
 
     $('#Save').on('click', e=>{
+        console.log(edited);
         $.ajax({
             url: "{% url 'tables:api:saverow' %}",
             data: {'data': JSON.stringify(edited)},

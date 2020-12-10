@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Список показателей{% endblock %}
 {% load static %}
+{% load main_extra_tags %}
 {% block additional_css %}
 <link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
 {% endblock %}
@@ -8,12 +9,94 @@
 <script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
 {% endblock %}
 {% block content %}
-    <H3>Плотность населения в Момском районе</H3>
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <img src="{% static 'img/map.PNG' %}" width="400" height="400">
+    <div class="container-fluid h-100">
+        <div class="row">
+            <div class="col">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col">
+                            <!--label for="period">Периоды</label>
+                            <select class="form-control" id="period" name="period" style="width:250px">
+                                <option value="1">На 01.01.2019</option>
+                                <option value="2">На 01.01.2020</option>
+                            </select>
+                            <br/-->
+                            <label for="cindicator">Показатель</label>
+                            <select class="form-select" multiple size="3" id="cindicator" name="cindicator" style="width:300px;">
+                                {% for indicator in indicators %}
+                                <option value="{{ indicator.id }}">{{ indicator.value__char200_value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label for="region">Район</label>
+                            <select class="form-select" multiple size="3" id="region" name="region" style="width:300px;">
+                                <option value="-1">Все</option>
+                                {% for region in regions %}
+                                <option value="{{ region.id }}">{{ region.value__char200_value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-primary">Получить</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row m-3">
+            <div class="col">
+                <div id="table_data"></div>
+                <!--img src="{% static 'img/Moma.jpeg' %}" width="100%" height="100%"-->
+            </div>
+        </div>
+        <div class="row m-3">
+            <div class="col">
+                <img src="{% static 'img/Moma.jpeg' %}" width="500px" height="500px">
+            </div>
         </div>
     </div>
 {% endblock %}
 {% block scripts %}
+{% if fields %}
+var columns = [
+    { title:"Название", field:"Name"},
+    {% for key,val in fields.items %}
+    { title: "{{ val }}", field: "{{ key }}"},
+    {% endfor %}
+]
+{% endif %}
+{% if data %}
+var data=[
+{
+{% for key, val in data.items %}
+"id": "L1{{ forloop.counter }}", "Name": "{{key}}", {% for key1,val1 in fields.items %}"{{ key1 }}": {{ val| get_field_data:key1 }}, {% endfor %}
+"_children":[
+    {% for key2, val2 in val.children.items %}
+    {
+    "id": "L2{{ forloop.counter }}", "Name": "{{ key2 }}",{% for key3,val3 in fields.items %}"{{ key3 }}": {{ val2| get_field_data:key3 }},{% endfor %}
+    "_children":[
+    {% for key4,val4 in val2.children.items %}
+    {
+    "id": "L3{{ forloop.counter }}", "Name": "{{ key4 }}", {% for key5,val5 in fields.items %} "{{ key5 }}": {{ val4| get_field_data:key5 }}, {% endfor %}
+    },
+    {% endfor %}
+    ],
+    },
+    {% endfor %}
+    ],
+},
+{% endfor %}
+]
+
+var table_data = new Tabulator('#table_data',{
+        layout: "fitColumns",
+        columns: columns,
+        data: data,
+        dataTree: true,
+        dataTreeStartExpanded: true,
+        height: "100%",
+    });
+{% endif %}
 {% endblock %}
