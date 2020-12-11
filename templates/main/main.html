@@ -34,6 +34,15 @@
                 </div>
             </div>
             {% endif %}
+            {% if request.user|has_group:"Operator"%}
+            <div class="col">
+                <div class="card text-white bg-info" style="height:200px">
+                    <div class="card-body align-items-center d-flex justify-content-center">
+                        <a href="{% url 'reports:list' %}" class="card-link" style="color:white;"><h1>Периоды</h1></a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endblock %}
