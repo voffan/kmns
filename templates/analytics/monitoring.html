@@ -3,10 +3,13 @@
 {% load static %}
 {% load main_extra_tags %}
 {% block additional_css %}
-<link rel="stylesheet" href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/tabulator/tabulator.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/select2/select2.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/select2/select2_checkboxes.css' %}" rel="stylesheet">
 {% endblock %}
 {% block additional_js %}
 <script type="text/javascript" src="{% static 'js/tabulator/tabulator.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/select2/select2.min.js' %}"></script>
 {% endblock %}
 {% block content %}
     <div class="container-fluid h-100">
@@ -61,6 +64,16 @@
     </div>
 {% endblock %}
 {% block scripts %}
+$(document).ready(function(){
+    $('#cindicator').select2({
+        closeOnSelect : false,
+		placeholder : "Placeholder",
+		// allowHtml: true,
+		allowClear: true,
+		tags: false
+    });
+    $('#region').select2();
+});
 {% if fields %}
 var columns = [
     { title:"Название", field:"Name"},

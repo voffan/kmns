@@ -64,7 +64,7 @@ def index(request):
 
         cells = Cell.objects.filter(
             (Q(col__brief_name='Наслег') | Q(col__brief_name='Значение') | Q(value__ref_value__id__in=indicators['cell'])) &
-             Q(row__id__in=cell_rows)).order_by('row__number', 'col__number')
+             Q(row__id__in=cell_rows)).order_by('row__id', 'col__number')
         village_region = get_regions_villages()
         data['Республика Саха (Якутия)'] = empty_row.copy()
         data['Республика Саха (Якутия)']['children'] = {}
@@ -78,7 +78,7 @@ def index(request):
                 data['Республика Саха (Якутия)']['children'][village_region[village]]['children'][village] = empty_row.copy()
             k = 'c'+str(cells[i+1].get_value().id)
             c = cells[i+2].get_value()
-            c = float(c) if type(c)==str and len(c) > 0 else c if type(c) != str else 0
+            c = float(c) if type(c)==str and len(c) > 0 else c if type(c) != str and c is not None else 0
             data['Республика Саха (Якутия)']['children'][village_region[village]]['children'][village][k] += c
             data['Республика Саха (Якутия)']['children'][village_region[village]][k] += c
             data['Республика Саха (Якутия)'][k] += c
