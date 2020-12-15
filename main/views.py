@@ -11,6 +11,7 @@ from openpyxl.comments import Comment
 
 from main.forms import AddTableForm
 from main.models import *
+from main.views_excel import export_table_to_excel
 from users.models import Person
 from reports.models import *
 # Create your views here.
@@ -241,3 +242,12 @@ def add_comment(cell, min_val, max_val):
         comment = 'Значение показателя не должно быть меньше ' + str(min_val)
     if comment != '':
         cell.comment = Comment(comment, '')
+
+
+@login_required(login_url='/users/login/')
+def export_table(request, table_id):
+    wb = export_table_to_excel(table_id)
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=indicators.xlsx'
+    wb.save(response)
+    return response

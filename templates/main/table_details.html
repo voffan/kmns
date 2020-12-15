@@ -36,7 +36,7 @@
                 </div>
             </div>
             <div class="col-auto">
-                <button class="btn btn-primary" id="download-table">Скачать</button>
+                <a class="btn btn-primary" href="{% url 'tables:exporttable' table.id %}" id="download-table">Скачать</a>
             </div>
         </div>
     </div>
@@ -60,9 +60,9 @@
         error.show();
         error.delay(3000).slideUp(500, ()=>{$(this).hide();});
     }
-    $('#download-table').on('click', e=>{
+    /*$('#download-table').on('click', e=>{
         table_data.download("xlsx", "{{table.name}}".substring(0,30)+".xlsx", {sheetName:"{{table.name}}".substring(0,30)});
-    });
+    });*/
 
     $('#Save').on('click', e=>{
         console.log(edited);
