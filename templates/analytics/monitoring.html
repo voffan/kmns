@@ -26,6 +26,7 @@
                             </select>
                             <br/-->
                             <label for="cindicator">Показатель</label>
+                            <br>
                             <select class="form-select" multiple size="3" id="cindicator" name="cindicator" style="width:400px;">
                                 {% for indicator in indicators %}
                                 <option value="{{ indicator.id }}">{{ indicator.value__char200_value }}</option>
@@ -34,6 +35,7 @@
                         </div>
                         <div class="col">
                             <label for="region">Район</label>
+                            <br>
                             <select class="form-select" multiple size="3" id="region" name="region" style="width:400px;">
                                 <option value="-1">Все</option>
                                 {% for region in regions %}
