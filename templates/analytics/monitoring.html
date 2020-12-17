@@ -26,7 +26,7 @@
                             </select>
                             <br/-->
                             <label for="cindicator">Показатель</label>
-                            <select class="form-select" multiple size="3" id="cindicator" name="cindicator" style="width:300px;">
+                            <select class="form-select" multiple size="3" id="cindicator" name="cindicator" style="width:400px;">
                                 {% for indicator in indicators %}
                                 <option value="{{ indicator.id }}">{{ indicator.value__char200_value }}</option>
                                 {% endfor %}
@@ -34,7 +34,7 @@
                         </div>
                         <div class="col">
                             <label for="region">Район</label>
-                            <select class="form-select" multiple size="3" id="region" name="region" style="width:300px;">
+                            <select class="form-select" multiple size="3" id="region" name="region" style="width:400px;">
                                 <option value="-1">Все</option>
                                 {% for region in regions %}
                                 <option value="{{ region.id }}">{{ region.value__char200_value }}</option>
@@ -42,6 +42,7 @@
                             </select>
                         </div>
                         <div class="col">
+                            <br>
                             <button class="btn btn-primary">Получить</button>
                         </div>
                     </div>
@@ -67,12 +68,16 @@
 $(document).ready(function(){
     $('#cindicator').select2({
         closeOnSelect : false,
-		placeholder : "Placeholder",
 		// allowHtml: true,
 		allowClear: true,
 		tags: false
     });
-    $('#region').select2();
+    $('#region').select2({
+        closeOnSelect : false,
+		// allowHtml: true,
+		allowClear: true,
+		tags: false
+    });
 });
 {% if fields %}
 var columns = [

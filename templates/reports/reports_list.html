@@ -123,7 +123,7 @@
 
 var data = [
 {% for report in reports %}
-{"id":{{ report.id }}, "user": {{ report.user.id }}, "date": "{{ report.report_date|date:"d.m.Y" }}", "state": {{ report.state }}, "text": "{{ report.text }}", "url": "{% url 'reports:report_tables' report.id %}" },
+{"id":{{ report.id }}, "user": {{ report.user.id }}, "date": "{{ report.report_date|date:"d.m.Y" }}", "state": {{ report.state }}, "text": {% if report.text %}"{{ report.text }}"{%else%}""{%endif%}, "url": "{% url 'reports:report_tables' report.id %}" },
 {% endfor %}
 ];
 
