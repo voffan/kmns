@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Загрузка файла{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link href="{% static 'css/select2/select2.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/select2/select2.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="alert alert-danger" role="alert" id="error" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="alert alert-success" role="alert" id="success" style="visibility:hidden;position:fixed;top:0;left:0;width:100%;z-index:100;"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h4>ИМПОРТ EXCEL-ФАЙЛА</h4>
+            </div>
+        </div>
+    </div>
+    <form method="post" id="mainform" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    {{ file_form.as_p }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="d-flex mb-2">
+                        <div class="mr-1">
+                        <button type="submit" class="btn btn-primary" id="Save">Загрузить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+{% block scripts %}
+$('#id_user').select2();
+$('#id_template').select2();
+{% endblock %}

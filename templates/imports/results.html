@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Результаты{% endblock %}
+{% load static %}
+{% block additional_css %}
+<link href="{% static 'css/select2/select2.min.css' %}" rel="stylesheet">
+{% endblock %}
+{% block additional_js %}
+<script type="text/javascript" src="{% static 'js/select2/select2.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h4>РЕЗУЛЬТАТЫ ИМПОРТА</h4>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h4>Загрузил пользователь:</h4> <b>{{ object.upload_user }}</b><br>
+                <h4>Загружен файл:</h4> {{ object.file_name }}<br>
+                <h4>Дата зугрузки:</h4> {{ object.date|date:"d.m.Y" }}<br>
+                <h4>Результаты загрузки:</h4>
+                <p>{{ object.result }}</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+{% endblock %}
