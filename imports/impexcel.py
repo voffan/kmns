@@ -36,6 +36,8 @@ def get_error_message(error_no, indicator, oktmo, value, row):
         return 'Значение ' + str(value) + ' показателя ' + indicator + ' для наслега  с ОКТМО ' + oktmo + ' не является числом! В строке ' + str(row) + '\n'
     elif error_no == 4:
         return 'Данные для наслега  с ОКТМО ' + oktmo + ' вы не можете загружать данные!  В строке ' + str(row) + '\n'
+    elif error_no == 5:
+        return 'Индикатор "' + indicator + '" не представлен в системе!\n'
     return ''
 
 

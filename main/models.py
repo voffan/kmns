@@ -29,6 +29,19 @@ TYPES = (
     (FORMULA, 'Формула'),
 )
 
+cell_value_fields = [
+                     'bool_value',
+                     'int_value',
+                     'float_value',
+                     'date_value',
+                     'datetime_value',
+                     'text_value',
+                     'char50_value',
+                     'char200_value',
+                     'ref_value',
+                     'formula_value'
+                    ]
+
 
 class Tag(Model):
     class Meta:

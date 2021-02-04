@@ -7,14 +7,12 @@ from users.models import Person
 class UserForm(Form):
     users = [(-1, 'Не выбран (Загрузить от имени текущего пользователя)')] + list(Person.objects.values_list('id', 'fullname'))
     user = IntegerField(label='От имени пользователя', required=True, widget=Select(attrs={'class': 'form-control'}, choices=users), initial=-1)
-    pass
 
 
 class ImportFileForm(Form):
     tamplates = list(ImportTemplate.objects.values_list('id', 'name'))
     template = IntegerField(label='Шаблон', required=True, widget=Select(attrs={'class': 'form-control'}, choices=tamplates))
     file = FileField(label='Excel-файл', required=True, widget=FileInput())
-    pass
 
 
 ImportFileSet = formset_factory(ImportFileForm, max_num=99)

@@ -180,7 +180,7 @@ def get_indicators():
     red_fill = PatternFill(start_color='EE1111', end_color='EE1111', fill_type='solid')
 
     for cell in indicators:
-        if cell is None:
+        if cell is None or cell.value is None:
             continue
         if cell.col.parent is not None and cell.col.parent.id == 20 and group != cell.value.ref_value.id:
             ws.cell(row=row_num, column=1, value=(row_num - first_row + 1))
