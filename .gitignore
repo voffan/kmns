@@ -12,3 +12,4 @@ production.py
 *.sqlite3
 *.pyc
 *.log
+kmns/production.py
